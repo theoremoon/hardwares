@@ -7,7 +7,8 @@ import Clash.Sized.BitVector (BitVector, (++#), Bit)
 import Clash.Class.BitPack (pack, unpack)
 import Clash.Promoted.Nat.Literals as Nat
 import Clash.Prelude (slice)
-import Prelude (($), error)
+import Prelude (($),(+),(-), error)
+import Data.Bits ((.|.), (.&.), xor)
 
 {-- there are four registers --}
 data Register
@@ -20,7 +21,7 @@ data Register
 newtype Ptr = Ptr (Unsigned 9)
 
 {-- this cpu has 64 bit size as a word --}
-newtype Word = Word (Unsigned 64)
+newtype Word = Word {value :: (Unsigned 64)}
 
 
 {-- this cpu has 16 instructions
@@ -33,8 +34,6 @@ data Instruction
     | Xor Register Register
     | Addi Register Word
     | Subi Register Word
-    | Inc Register
-    | Dec Register
     | Ld Register Register
     | St Register Register
     | Jmp Ptr
@@ -43,9 +42,9 @@ data Instruction
     | Halt
 
 {-- CPU Modes --}
-data CPUActivity
+data CPUMode
     = Fetch
-    | Exec
+    | Exec Instruction
     | Stopped
 
 {-- General Registers and Instruction Register --}
@@ -58,7 +57,7 @@ data Registers = Registers
     }
 
 {-- CPU Status is determined by its mode and regsiters --}
-data CPUState  = CPUState CPUActivity Registers
+data CPUState  = CPUState CPUMode Registers
 
 
 {-- there are 64 words of memory --}
@@ -87,6 +86,9 @@ readRAM (RAM ram) (Ptr ptr) = ram !! ptr
 writeRAM :: RAM -> Ptr -> Word -> RAM
 writeRAM (RAM ram) (Ptr ptr) w = RAM (replace ptr w ram)
 
+nextPC :: Ptr -> Ptr
+nextPC (Ptr pc) = Ptr (pc + 1)
+
 {-- Instruction Encoder --}
 encode :: Instruction -> Word
 encode ir =
@@ -99,8 +101,6 @@ encode ir =
     Xor dst src -> tag 4 ++#  reg dst ++# reg src ++# 0
     Addi dst (Word imm) -> tag 5 ++# reg dst ++# pack (resize imm) {-- 4bit + 4bit + 56bit --}
     Subi dst (Word imm) -> tag 6 ++# reg dst ++# pack (resize imm)
-    Inc dst -> tag 7 ++# 0
-    Dec dst -> tag 8 ++# 0
     Ld dst src -> tag 10 ++# reg dst ++# reg src ++# 0
     St dst src -> tag 11 ++# reg dst ++# reg src ++# 0
     Jmp (Ptr ptr) -> tag 12 ++# pack ptr ++# 0
@@ -125,17 +125,14 @@ decode (Word code) =
      2 -> And dst src
      3 -> Or  dst src
      4 -> Xor dst src
-     5 -> Add dst src
-     6 -> Addi dst imm
-     7 -> Subi dst imm
-     8 -> Inc dst
-     9 -> Dec dst
-     11 -> Ld dst src
-     12 -> St dst src
-     13 -> Jmp ptr
-     14 -> Jz ptr
-     15 -> Jg ptr
-     16 -> Halt
+     5 -> Addi dst imm
+     6 -> Subi dst imm
+     10 -> Ld dst src
+     11 -> St dst src
+     12 -> Jmp ptr
+     13 -> Jz ptr
+     14 -> Jg ptr
+     15 -> Halt
      _ -> error "Unknown Instruction"
    where
       tag = unpack (slice Nat.d63 Nat.d60 code) :: Unsigned 4
@@ -149,4 +146,78 @@ decode (Word code) =
       reg 2 = R3
       reg 3 = R4
       reg _ = error "Invalid Register"
+
+{-- do CPU Logic --}
+cycle :: (CPUState, RAM) -> (CPUState, RAM)
+cycle (CPUState mode regs, ram) =
+   case mode of
+    Fetch ->
+       (CPUState mode' regs', ram)
+          where
+             ir = readRAM ram (pc regs)
+             mode' = Exec (decode ir)
+             regs' = regs { pc = nextPC (pc regs)}
+    Exec ir ->
+       case ir of
+         Add dst src ->
+            (CPUState Fetch regs', ram)
+               where
+                  src' = value (readRegister regs src)
+                  dst' = value (readRegister regs dst)
+                  regs' = writeRegister regs dst (Word (dst' + src'))
+         Sub dst src ->
+            (CPUState Fetch regs', ram)
+               where
+                  src' = value (readRegister regs src)
+                  dst' = value (readRegister regs dst)
+                  regs' = writeRegister regs dst (Word (dst' - src'))
+         And dst src ->
+            (CPUState Fetch regs', ram)
+              where
+                  src' = pack $ value (readRegister regs src)
+                  dst' = pack $ value (readRegister regs dst)
+                  regs' = writeRegister regs dst (Word (unpack (dst' .&. src')))
+         Or  dst src ->
+            (CPUState Fetch regs', ram)
+              where
+                  src' = pack $ value (readRegister regs src)
+                  dst' = pack $ value (readRegister regs dst)
+                  regs' = writeRegister regs dst (Word (unpack (dst' .|. src')))
+         Xor dst src ->
+            (CPUState Fetch regs', ram)
+              where
+                  src' = pack $ value (readRegister regs src)
+                  dst' = pack $ value (readRegister regs dst)
+                  regs' = writeRegister regs dst (Word (unpack (dst' `xor` src')))
+         Addi dst imm ->
+            (CPUState Fetch regs', ram)
+              where
+                  dst' = value (readRegister regs dst)
+                  imm' = value imm
+                  regs' = writeRegister regs dst (Word (dst' + imm'))
+         Subi dst imm ->
+            (CPUState Fetch regs', ram)
+              where
+                  dst' = value (readRegister regs dst)
+                  imm' = value imm
+                  regs' = writeRegister regs dst (Word (dst' - imm'))
+         Ld dst src ->
+            (CPUState Fetch regs', ram)
+              where
+                  dst' = pack $ value (readRegister regs dst)
+                  addr = Ptr (resize (value (readRegister regs src)))
+                  regs' = writeRegister regs dst (readRAM ram addr)
+         St dst src ->
+            (CPUState Fetch regs, ram')
+              where
+                  src' = readRegister regs src
+                  addr = Ptr (resize (value (readRegister regs dst)))
+                  ram' = writeRAM ram addr src'
+         Jmp ptr ->(CPUState mode regs, ram) {-- TO DO NEXT IS IMPLEMENT CMP INSTRUCTION AND JUMPS --}
+         Jz ptr ->(CPUState mode regs, ram)
+         Jg ptr ->(CPUState mode regs, ram)
+         _ -> (CPUState mode regs, ram)
+    Stopped -> (CPUState mode regs, ram)
+
+
 
