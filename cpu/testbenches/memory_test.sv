@@ -3,18 +3,18 @@
 `timescale 1ns/100ps
 module test_memory();
     parameter N=32;
-    parameter M=16;
+    parameter M=10;
 
     reg clk;
-    reg [M-1:0] address;
-    reg wf;
+    reg [M+2-1:0] address;
+    reg [N-1:0] mask;
     reg [N-1:0] w;
     wire [N-1:0] v;
 
     memory ram(
         .clk(clk),
         .address(address),
-        .wf(wf),
+        .mask(mask),
         .w(w),
         .v(v));
 
@@ -25,12 +25,13 @@ module test_memory();
         $dumpfile("memory_test.vcd");
         $dumpvars(0, test_memory);
 
-        #1 clk = 0; wf = 0;
-        #10 wf = 1; address = 16'h0001; w = 32'hcafebabe;
-        #10 wf = 1; address = 16'hffff; w = 32'hdeadbeef;
-        #10 wf = 0; address = 16'h0000;
-        #10 wf = 0; address = 16'h0001;
-        #10 wf = 0; address = 16'hffff;
+        #1 clk = 0;
+        #10 address = 12'h000; mask = 32'hffffffff; w = 32'hcafebabe;
+        #10 address = 12'h000; mask = 32'h0000ffff; w = 32'hdeadbeef;
+        #10 address = 12'h002; mask = 32'h00000000;
+        #10 address = 12'hff0; mask = 32'hffffffff; w = 32'hc0be5417;
+        #10 address = 12'h000; mask = 32'h00000000;
+        #10 address = 12'hff0; mask = 32'h00000000;
         #10 $finish;
     end
 endmodule
