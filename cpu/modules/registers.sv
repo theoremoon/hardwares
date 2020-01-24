@@ -8,7 +8,6 @@ module registers #(
     parameter M = 2  // 2^M numbers of registers
 )(
     input clk, // clock
-    input rst, // reset
     input [M-1:0] r1,  // register id 1 to read
     input [M-1:0] r2,  // register id 2 to read
     input [M:0] w1,  // register id to write if MSB is 1 this is disabled
@@ -19,13 +18,13 @@ module registers #(
     reg [N-1:0] regs[2**M-1:0]; // internal registers (4 items)
     integer i;
 
-    always @(posedge clk or negedge rst) begin
-        if (!rst) begin
-            for (i = 0; i < 2**M; i++) begin
-                regs[i] = 0;
-            end
+    initial begin
+        for (i = 0; i < 2**M; i++) begin
+            regs[i] = 0;
         end
+    end
 
+    always @(posedge clk) begin
         if (w1[M] == 0) begin
             regs[w1] = w;
         end

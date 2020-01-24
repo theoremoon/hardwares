@@ -8,12 +8,14 @@ module test_alu();
     reg [N-1:0]y;
     wire [N-1:0] z;
     wire zf;
+    wire sf;
 
     alu alu(
         .x(x),
         .y(y),
         .z(z),
-        .zf(zf));
+        .zf(zf),
+        .sf(sf));
 
 
     initial begin

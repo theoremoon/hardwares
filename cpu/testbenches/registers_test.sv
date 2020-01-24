@@ -5,7 +5,6 @@ module test_registers();
     parameter N=32;
 
     reg clk;
-    reg rst;
     reg [1:0] r1;
     reg [1:0] r2;
     reg [2:0] w1;
@@ -15,7 +14,6 @@ module test_registers();
 
     registers regs(
         .clk(clk),
-        .rst(rst),
         .r1(r1),
         .r2(r2),
         .w1(w1),
@@ -30,8 +28,7 @@ module test_registers();
         $dumpfile("registers_test.vcd");
         $dumpvars(0, test_registers);
 
-        #1 rst = 0; clk = 0; r1 = 0; r2 = 0; w1 = 0; w = 0;
-        #10 rst = 1;
+        #1 clk = 0; r1 = 0; r2 = 0; w1 = 0; w = 0;
         #10 w1 = 0; w = 32'd01;
         #10 w1 = 1; w = 32'b11;
         #10 w1 = 2; w = 32'b111;
