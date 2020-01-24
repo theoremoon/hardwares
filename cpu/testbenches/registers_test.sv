@@ -27,17 +27,10 @@ module test_registers();
         clk <= !clk;
 
     initial begin
-        $dumpfile("register_test.vcd");
+        $dumpfile("registers_test.vcd");
         $dumpvars(0, test_registers);
 
-        #1
-        rst = 0;
-        clk = 0;
-        r1 = 0;
-        r2 = 0;
-        w1 = 0;
-        w = 0;
-
+        #1 rst = 0; clk = 0; r1 = 0; r2 = 0; w1 = 0; w = 0;
         #10 rst = 1;
         #10 w1 = 0; w = 32'd01;
         #10 w1 = 1; w = 32'b11;

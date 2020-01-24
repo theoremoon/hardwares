@@ -11,7 +11,7 @@ module registers #(
     input rst, // reset
     input [M-1:0] r1,  // register id 1 to read
     input [M-1:0] r2,  // register id 2 to read
-    input [2:0] w1,  // register id to write if MSB is 1 this is disabled
+    input [M:0] w1,  // register id to write if MSB is 1 this is disabled
     input [N-1:0] w,  // value to write
     output reg [N-1:0] v1, // register 1 value to read
     output reg [N-1:0] v2 // register 2 value to read
@@ -26,7 +26,7 @@ module registers #(
             end
         end
 
-        if (w1[2] == 0) begin
+        if (w1[M] == 0) begin
             regs[w1] = w;
         end
 
