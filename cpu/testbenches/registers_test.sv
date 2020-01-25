@@ -36,7 +36,8 @@ module test_registers();
         #10 w1 = 2; mask = 32'hf0f0f0f0; w = 32'hCfBfBfEf;
         #10 w1 = 2; mask = 32'h0f0f0f0f; w = 32'hf0fEfEfF;
         #10 w1 = 3; mask = 32'hffffffff; w = 32'hffffffff;
-        #10 r1 = 0; r2 = 1;
+        #10 r1 = 0; r2 = 1; w1 = 0; mask=32'hffffffff; w = 32'h0; // v1 should be BABEC0FF
+        #10 // at here then v1 is 0
         #10 r1 = 2; r2 = 3;
         #10 $finish;
     end

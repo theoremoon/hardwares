@@ -22,10 +22,10 @@ module memory #(
     end
 
     always @(posedge clk) begin
+        v <= {ram[address+0],ram[address+1],ram[address+2],ram[address+3]};
         for (i = 0; i < B; i++) begin
-            ram[address+i] = (ram[address+i]&((~mask)>>((B-i-1)*8)))|((w>>((B-i-1)*8))&((mask)>>((B-i-1)*8)));
+            ram[address+i] <= (ram[address+i]&((~mask)>>((B-i-1)*8)))|((w>>((B-i-1)*8))&((mask)>>((B-i-1)*8)));
         end
-        v = {ram[address+0],ram[address+1],ram[address+2],ram[address+3]};
     end
 
 endmodule

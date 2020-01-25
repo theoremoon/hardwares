@@ -5,12 +5,16 @@ module alu #(
 )(
     input [N-1:0] x,
     input [N-1:0] y,
+    input mode,
     output reg [N-1:0] z,
     output reg zf,
     output reg sf
 );
     always @(x or y) begin
-        z = x + y;
+        case (mode)
+            1'b0: z = x + y;
+            1'b1: z = x ^ y;
+        endcase
 
         zf = (z == 0);
         sf = (z[N-1] == 1);

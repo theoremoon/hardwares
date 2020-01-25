@@ -3,7 +3,9 @@
 // 32 bit cpu
 module cpu(
     input clk,
-    input [N*(2**M)-1:0] instructions // instruction memory
+    input rst,
+    input [7:0] instructions [4*(2**M)-1:0], // instruction memory
+    output reg is_halted
 );
     localparam N = 32;
     localparam M = 10;
@@ -17,11 +19,12 @@ module cpu(
     wire [N-1:0] imm;
     wire imm_flag;
     wire [N-1:0] mask;
+    wire halted_flag;
     wire mem_read;
+    wire alu_mode;
     wire pc_read;
     wire is_jz;
     wire is_jg;
-    wire is_halted;
 
     wire [N-1:0] v1;
     wire [N-1:0] v2;
@@ -41,11 +44,12 @@ module cpu(
         .imm(imm),
         .imm_flag(imm_flag),
         .mask(mask),
+        .alu_mode(alu_mode),
         .mem_read(mem_read),
         .pc_read(pc_read),
         .is_jz(is_jz),
         .is_jg(is_jg),
-        .is_halted(is_halted));
+        .is_halted(halted_flag));
     registers registers(
         .clk(clk),
         .r1(r1),
@@ -63,6 +67,7 @@ module cpu(
     alu alu(
         .x(v1),
         .y(m1),
+        .mode(alu_mode),
         .z(z),
         .zf(zf),
         .sf(sf));
@@ -76,24 +81,52 @@ module cpu(
         .v(z),
         .w({22'b0, pc}),
         .x(memv),
-        .y(32'hz),
+        .y(32'hx),
         .sel({mem_read, pc_read}),
         .z(w));
 
     initial begin
         pc = 0;
+        is_halted = 0;
     end
 
-    always @(posedge clk) begin
-        if (is_halted == 0) begin
-            // FETCH
-            instr <= instructions[pc+:N];
-
-            // automatically executed
-
-            // UPDATE PC
-            pc <= ((is_jz&zf)|(is_jg&(~sf))) ? z[M-1:0] : pc + 4;
+    always @(clk or negedge rst) begin
+        if (rst == 0) begin
+            pc = 0;
+        end
+        else if (halted_flag == 0) begin
+            if (clk) begin
+                // FETCH
+                instr = {instructions[pc],instructions[pc+1],instructions[pc+2],instructions[pc+3]};
+                // automatically executed
+            end
+            else begin
+                // UPDATE PC
+                pc = ((is_jz&zf)|(is_jg&(~sf))) ? z[M-1:0] : pc + 4;
+                // pc = pc + 4;
+        $display("PC: %d", pc);
+        $display("INSTR: %x", instr);
+        $display("ALUMODE: %d", alu_mode);
+        $display("R1: %x", r1);
+        $display("R2: %x", r2);
+        $display("V1: %x", v1);
+        $display("V2: %x", v2);
+        $display("mask: %x", mask);
+        $display("Imm: %d", imm);
+        $display("ImmFlag: %d", imm_flag);
+        $display("Halt: %d", halted_flag);
+        $display("is_jz: %d", is_jz);
+        $display("is_jg: %d", is_jg);
+        $display("Z: %x", z);
+        $display("zf: %d", zf);
+        $display("sf: %d", sf);
+        $display("");
+            end
+        end
+        else begin
+            is_halted = 1;
         end
     end
+
 
 endmodule

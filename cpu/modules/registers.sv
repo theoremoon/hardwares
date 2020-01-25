@@ -26,8 +26,8 @@ module registers #(
     end
 
     always @(posedge clk) begin
-        regs[w1] = (regs[w1]&(~mask))|(w&mask);
-        v1 = regs[r1];
-        v2 = regs[r2];
+        v1 <= regs[r1];
+        v2 <= regs[r2];
+        regs[w1] <= (regs[w1]&(~mask))|(w&mask);
     end
 endmodule
