@@ -6,3 +6,7 @@ view() {
     test "$1"
     gtkwave "$1_test.vcd"
 }
+cpu() {
+    iverilog modules/*.sv -o cpu
+    vvp "cpu"
+}
