@@ -10,7 +10,8 @@ module registers #(
     input clk, // clock
     input [M-1:0] r1,  // register id 1 to read
     input [M-1:0] r2,  // register id 2 to read
-    input [M:0] w1,  // register id to write if MSB is 1 this is disabled
+    input [M-1:0] w1,  // register id to write
+    input [N-1:0] mask, // write mask (if bit is 1 overwite else keep)
     input [N-1:0] w,  // value to write
     output reg [N-1:0] v1, // register 1 value to read
     output reg [N-1:0] v2 // register 2 value to read
@@ -25,10 +26,7 @@ module registers #(
     end
 
     always @(posedge clk) begin
-        if (w1[M] == 0) begin
-            regs[w1] = w;
-        end
-
+        regs[w1] = (regs[w1]&(~mask))|(w&mask);
         v1 = regs[r1];
         v2 = regs[r2];
     end
