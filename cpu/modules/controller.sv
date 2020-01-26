@@ -30,6 +30,21 @@ module controller (
     always @(instr) begin
         if (halted_flag == 0) begin
             case (instr[31:26])
+                6'b100000: begin
+                    // Add $d, $s, $t
+                    alu_mode = 1'b0;
+                    r1 = instr[22:21];  // s
+                    r2 = instr[17:16];  // t
+                    w1 = instr[12:11];  // d
+                    imm = 0;
+                    imm_flag = 0;
+                    mask = 32'hffffffff;
+                    mem_read = 0;
+                    pc_read = 0;
+                    is_jz = 0;
+                    is_jg = 0;
+                    halted_flag = 0;
+                end
                 6'b001000: begin
                     // Addi $t, $s, C
                     $display("Addi");
