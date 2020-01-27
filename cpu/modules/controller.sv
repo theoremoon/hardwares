@@ -67,12 +67,13 @@
 
 // 32 bit cpu controller
 module controller (
+    input clk,
     input [N-1:0] instr,
     output reg [3:0] r1, // register id to load
     output reg [3:0] r2,
     output reg [3:0] w1, // register id to write
     output reg [N-1:0] imm,
-    output reg alu_mode,
+    output reg [3:0] alu_mode,
     output reg imm_flag,  // when true, use imm instead of r2
     output reg [N-1:0] mask, // memory/register read/write mask
     output reg reg_write, // register write bit
@@ -93,10 +94,10 @@ module controller (
         halted_flag = 0;
     end
 
-    always @(instr) begin
+    always @(posedge clk) begin
         if (halted_flag == 0) begin
             casex (instr[31:29])
-                3'b00x: begin
+                3'b010, 3'b00x: begin
                     // arithmetic/logic operation
                     alu_mode = instr[30:27];
                     if (instr[26] == 0) begin
@@ -112,7 +113,7 @@ module controller (
                         // I format: IIIIII|dddd|ssss|vvvvvvvvvvvvvvvvvvv
                         w1 = instr[25:22];  // d
                         r1 = instr[21:18];  // s
-                        r2 = 4'bxxxx;
+                        r2 = 4'b0;
                         imm = instr[17:0];  // t
                         imm_flag = 1;
                     end
@@ -125,16 +126,16 @@ module controller (
                     is_branch = 0;
                     halted_flag = 0;
                 end
-                3'b010: begin
+                3'b011: begin
                     // memory operation
                     // I format: IIIIII|dddd|ssss|vvvvvvvvvvvvvvvvvvv
                     alu_mode = 4'b0001; // ADD
-                    w1 = instr[25:22];  // d
+                    w1 = instr[25:22];  // d (load)
                     r1 = instr[21:18];  // s
-                    r2 = 4'bxxxx;
+                    r2 = instr[25:22];  // d (store)
                     imm = instr[17:0];  // t
                     imm_flag = 1;
-                    mask = {{16{instr[28]&instr[27]}}, {8{instr[28]}}, 8'b1};
+                    mask = {{16{instr[28]&instr[27]}}, {8{instr[28]}}, 8'b11111111};
                     pc_read = 0;
                     is_jump = 0;
                     is_branch = 0;

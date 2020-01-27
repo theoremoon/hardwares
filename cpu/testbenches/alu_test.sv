@@ -4,23 +4,28 @@
 module test_alu();
     parameter N=32;
 
+    reg clk;
     reg [N-1:0]x;
     reg [N-1:0]y;
     reg [3:0] mode;
     wire [N-1:0] z;
 
     alu alu(
+        .clk(clk),
         .x(x),
         .y(y),
         .mode(mode),
         .z(z));
 
+    always #5 begin
+        clk <= !clk;
+    end
 
     initial begin
         $dumpfile("alu_test.vcd");
         $dumpvars(0, test_alu);
 
-        mode = 4'b0000;
+        clk = 1; mode = 4'b0000;
         #10  x = 32'h33333333; y = 32'h02222222; mode = 4'b0001; // ADD
         #10  x = 32'h33333333; y = 32'h02222222; mode = 4'b0010; // SUB
         #10  x = 32'h33333333; y = 32'h02222222; mode = 4'b0011; // MUL
@@ -30,6 +35,7 @@ module test_alu();
         #10  x = 32'h33333333; y = 32'h02222222; mode = 4'b0101; // AND
         #10  x = 32'h33333333; y = 32'h02222222; mode = 4'b0110; // OR
         #10  x = 32'h33333333; y = 32'h02222222; mode = 4'b0111; // XOR
+        #10  x = 32'h00000000; y = 32'h00000000; mode = 4'b0111; // XOR
         #10  x = 32'h33333333; y = 32'h02222222; mode = 4'b1000; // NOR
         #10  x = 32'h33333333; y = 32'h02222222; mode = 4'b1001; // SLL
         #10  x = 32'h33333333; y = 32'h02222222; mode = 4'b1010; // SLR

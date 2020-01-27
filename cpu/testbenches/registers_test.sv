@@ -32,15 +32,15 @@ module test_registers();
         $dumpfile("registers_test.vcd");
         $dumpvars(0, test_registers);
 
-        #1 clk = 0; r1 = 0; r2 = 1; w1 = 0; wf = 0; mask=32'h00000000;w = 0;
-        #10 w1 = 0; wf = 1; mask=32'hffffffff; w = 32'hBABEC0FF;  // write to $0, but $0 is always 0
-        #10 w1 = 1; wf = 1; mask=32'hf0f0f0f0; w = 32'h5417CAFE;
-        #10 w1 = 1; wf = 1; mask=32'h0f0f0f0f; w = 32'h5417CAFE;  // at here $1 is 5010C0F0
-        #10 w1 = 2; wf = 1; mask=32'hffffffff; w = 32'hDEADBEEF;  // here, $1 becomes 5417CAFE
-        #10 w1 = 2; wf = 0; mask=32'hffffffff; w = 32'hxxxxxxxx;  // wf = 0
-        #10 w1 = 3; wf = 1; mask=32'hffffffff; w = 32'hffffffff;
-        #10 r1 = 0; r2 = 1; w1 = 1; wf=1; w = 32'h0; // v1($1) still be 5417CAFE, change is applied at next clk
-        #10 r1 = 2; r2 = 3; // at here then v1 is 0
+        clk = 0; r1 = 0; r2 = 1; w1 = 0; wf = 0; mask=32'h00000000; w = 0;
+        #10 r1 = 0; r2 = 1; w1 = 0; wf = 1; mask=32'hffffffff; w = 32'hBABEC0FF;  // write to $0, but $0 is always 0
+        #10 r1 = 0; r2 = 1; w1 = 1; wf = 1; mask=32'hffffffff; w = 32'hCAFEBABE;  // write to $1
+        #10 r1 = 2; r2 = 3; w1 = 2; wf = 1; mask=32'h0000ffff; w = 32'hC0FFEEff;
+        #10 r1 = 2; r2 = 3; w1 = 2; wf = 1; mask=32'hffff0000; w = 32'hC0FFEEff;
+        #10 r1 = 2; r2 = 3; w1 = 3; wf = 0; mask=32'hffffffff; w = 32'hDEADBEEF;
+        #10 r1 = 2; r2 = 3; w1 = 3; wf = 1; mask=32'hffffffff; w = 32'hDEADBEEF;
+        #10 r1 = 0; r2 = 1; wf = 0;
+        #10 r1 = 2; r2 = 3; wf = 0;
         #10 $finish;
     end
 endmodule

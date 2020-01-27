@@ -14,10 +14,10 @@ module registers #(
     input [N-1:0] mask, // write mask (if bit is 1 overwite else keep)
     input wf,  // write flag
     input [N-1:0] w,  // value to write
-    output reg [N-1:0] v1, // register 1 value to read
-    output reg [N-1:0] v2 // register 2 value to read
+    output [N-1:0] v1, // register 1 value to read
+    output [N-1:0] v2 // register 2 value to read
 );
-    reg [N-1:0] regs[2**M-1:0]; // internal registers (4 items)
+    reg [N-1:0] regs[2**M-1:0]; // internal registers (4 items default)
     integer i;
 
     initial begin
@@ -26,10 +26,9 @@ module registers #(
         end
     end
 
+    assign v1 = (r1 == 0) ? 0 : regs[r1];
+    assign v2 = (r2 == 0) ? 0 : regs[r2];
     always @(posedge clk) begin
-        v1 <= regs[r1];
-        v2 <= regs[r2];
-        regs[0] <= 0;
         if (wf == 1'b1) begin
             regs[w1] <= (regs[w1]&(~mask))|(w&mask);
         end

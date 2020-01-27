@@ -8,7 +8,7 @@ module memory #(
     input [N-1:0] mask, // 0 to keep memory value, 1 to overwrite
     input wf, // write flag
     input [N-1:0] w,  // value to write
-    output reg [N-1:0] v // read value
+    output [N-1:0] v // read value
 );
     localparam N = 32;  // N is word size
     localparam B = N/8;  // B is octet form of N
@@ -22,8 +22,9 @@ module memory #(
         end
     end
 
+
+    assign v = {ram[address+0],ram[address+1],ram[address+2],ram[address+3]};
     always @(posedge clk) begin
-        v <= {ram[address+0],ram[address+1],ram[address+2],ram[address+3]};
         if (wf == 1) begin
             for (i = 0; i < B; i++) begin
                 ram[address+i] <= (ram[address+i]&((~mask)>>((B-i-1)*8)))|((w>>((B-i-1)*8))&((mask)>>((B-i-1)*8)));

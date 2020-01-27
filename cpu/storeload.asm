@@ -1,0 +1,4 @@
+ADDi $2 $0 0xCAFE
+SW $2 $0 0
+LW $3 $0 0
+HALT

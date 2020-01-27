@@ -12,17 +12,23 @@ module cpu(
 
     reg [M-1:0] pc; // program counter
     reg [N-1:0] instr;
+    reg controller_clk;
+    reg mem_clk;
+    reg reg_clk;
+    reg reg_write_flag;
+    reg alu_clk;
+    reg [3:0] state;
 
-    wire [1:0] r1;
-    wire [1:0] r2;
-    wire [1:0] w1;
+    wire [3:0] r1;
+    wire [3:0] r2;
+    wire [3:0] w1;
     wire [N-1:0] imm;
     wire imm_flag;
     wire [N-1:0] mask;
     wire reg_write;
     wire mem_write;
     wire mem_read;
-    wire alu_mode;
+    wire [3:0] alu_mode;
     wire pc_read;
     wire is_branch;
     wire is_jump;
@@ -34,12 +40,11 @@ module cpu(
     wire [N-1:0] memv;  // value readed from memory
 
     wire [N-1:0] z;
-    wire zf;
-    wire sf;
     wire [N-1:0] w;
 
     controller controller(
         // input
+        .clk(controller_clk),
         .instr(instr),
         // output
         .alu_mode(alu_mode),
@@ -56,13 +61,14 @@ module cpu(
         .is_branch(is_branch),
         .is_jump(is_jump),
         .is_halted(halted_flag));
+    defparam registers.M = 4;
     registers registers(
-        .clk(clk),
+        .clk(reg_clk),
         .r1(r1),
         .r2(r2),
         .w1(w1),
         .mask(mask),
-        .wf(reg_write),
+        .wf(reg_write_flag),
         .w(w),
         .v1(v1),
         .v2(v2));
@@ -72,14 +78,13 @@ module cpu(
         .sel(imm_flag),
         .z(m1));
     alu alu(
+        .clk(alu_clk),
         .x(v1),
         .y(m1),
         .mode(alu_mode),
-        .z(z),
-        .zf(zf),
-        .sf(sf));
+        .z(z));
     memory memory(
-        .clk(clk),
+        .clk(mem_clk),
         .address(z[M+2-1:0]),
         .mask(mask),
         .wf(mem_write),
@@ -87,54 +92,70 @@ module cpu(
         .v(memv));
     mux4 regwritemux(
         .v(z),
-        .w({22'b0, pc}),
+        .w({22'b0, pc + 10'd4}),
         .x(memv),
         .y(32'hx),
         .sel({mem_read, pc_read}),
         .z(w));
+
 
     initial begin
         pc = 0;
         is_halted = 0;
     end
 
-    always @(clk or negedge rst) begin
-        if (rst == 0) begin
+    always @(posedge clk or negedge rst) begin
+        if (rst == 1'b0) begin
             pc = 0;
+            state = 4'b0000;
+            controller_clk = 0;
+            mem_clk = 0;
+            reg_clk = 0;
+            alu_clk = 0;
         end
         else if (halted_flag == 0) begin
-            if (clk) begin
-                // FETCH
-                instr = {instructions[pc],instructions[pc+1],instructions[pc+2],instructions[pc+3]};
-                // automatically executed
-            end
-            else begin
-                // UPDATE PC
-                if (is_jump) begin
-                    pc = z[M-1:0];
+            case (state)
+                4'b0000: begin
+                    instr <= {instructions[pc],instructions[pc+1],instructions[pc+2],instructions[pc+3]};
+                    controller_clk <= 1;
+                    state <= 4'b0001;
                 end
-                else if (is_branch & z[0] == 1) begin
-                    pc = imm;
+                4'b0001: begin
+                    controller_clk <= 0;
+                    reg_write_flag <= 0;
+                    reg_clk <= 1;
+                    state <= 4'b0010;
                 end
-                else begin
-                    pc = pc + 4;
+                4'b0010: begin
+                    reg_clk <= 0;
+                    alu_clk <= 1;
+                    state <= 4'b0011;
                 end
-        $display("PC: %d", pc);
-        $display("INSTR: %x", instr);
-        $display("ALUMODE: %d", alu_mode);
-        $display("R1: %x", r1);
-        $display("R2: %x", r2);
-        $display("V1: %x", v1);
-        $display("V2: %x", v2);
-        $display("mask: %x", mask);
-        $display("Imm: %d", imm);
-        $display("ImmFlag: %d", imm_flag);
-        $display("Halt: %d", halted_flag);
-        $display("Z: %x", z);
-        $display("zf: %d", zf);
-        $display("sf: %d", sf);
-        $display("");
-            end
+                4'b0011: begin
+                    alu_clk <= 0;
+                    mem_clk <= 1;
+                    state <= 4'b0100;
+                end
+                4'b0100: begin
+                    mem_clk <= 0;
+                    reg_write_flag <= reg_write;
+                    reg_clk <= 1;
+                    state <= 4'b0101;
+                end
+                4'b0101: begin
+                    reg_clk <= 0;
+                    if (is_jump) begin
+                        pc <= z[M-1:0];
+                    end
+                    else if (is_branch & z[0] == 1) begin
+                        pc <= imm;
+                    end
+                    else begin
+                        pc <= pc + 4;
+                    end
+                    state <= 4'b0000;
+                end
+            endcase
         end
         else begin
             is_halted = 1;
