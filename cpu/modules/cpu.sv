@@ -19,12 +19,14 @@ module cpu(
     wire [N-1:0] imm;
     wire imm_flag;
     wire [N-1:0] mask;
-    wire halted_flag;
+    wire reg_write;
+    wire mem_write;
     wire mem_read;
     wire alu_mode;
     wire pc_read;
-    wire is_jz;
-    wire is_jg;
+    wire is_branch;
+    wire is_jump;
+    wire halted_flag;
 
     wire [N-1:0] v1;
     wire [N-1:0] v2;
@@ -37,18 +39,22 @@ module cpu(
     wire [N-1:0] w;
 
     controller controller(
+        // input
         .instr(instr),
+        // output
+        .alu_mode(alu_mode),
         .r1(r1),
         .r2(r2),
         .w1(w1),
         .imm(imm),
         .imm_flag(imm_flag),
         .mask(mask),
-        .alu_mode(alu_mode),
+        .reg_write(reg_write),
+        .mem_write(mem_write),
         .mem_read(mem_read),
         .pc_read(pc_read),
-        .is_jz(is_jz),
-        .is_jg(is_jg),
+        .is_branch(is_branch),
+        .is_jump(is_jump),
         .is_halted(halted_flag));
     registers registers(
         .clk(clk),
@@ -56,6 +62,7 @@ module cpu(
         .r2(r2),
         .w1(w1),
         .mask(mask),
+        .wf(reg_write),
         .w(w),
         .v1(v1),
         .v2(v2));
@@ -75,6 +82,7 @@ module cpu(
         .clk(clk),
         .address(z[M+2-1:0]),
         .mask(mask),
+        .wf(mem_write),
         .w(v2),
         .v(memv));
     mux4 regwritemux(
@@ -102,8 +110,15 @@ module cpu(
             end
             else begin
                 // UPDATE PC
-                pc = ((is_jz&zf)|(is_jg&(~sf))) ? z[M-1:0] : pc + 4;
-                // pc = pc + 4;
+                if (is_jump) begin
+                    pc = z[M-1:0];
+                end
+                else if (is_branch & z[0] == 1) begin
+                    pc = imm;
+                end
+                else begin
+                    pc = pc + 4;
+                end
         $display("PC: %d", pc);
         $display("INSTR: %x", instr);
         $display("ALUMODE: %d", alu_mode);
@@ -115,8 +130,6 @@ module cpu(
         $display("Imm: %d", imm);
         $display("ImmFlag: %d", imm_flag);
         $display("Halt: %d", halted_flag);
-        $display("is_jz: %d", is_jz);
-        $display("is_jg: %d", is_jg);
         $display("Z: %x", z);
         $display("zf: %d", zf);
         $display("sf: %d", sf);

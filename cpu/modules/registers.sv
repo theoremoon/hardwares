@@ -12,6 +12,7 @@ module registers #(
     input [M-1:0] r2,  // register id 2 to read
     input [M-1:0] w1,  // register id to write
     input [N-1:0] mask, // write mask (if bit is 1 overwite else keep)
+    input wf,  // write flag
     input [N-1:0] w,  // value to write
     output reg [N-1:0] v1, // register 1 value to read
     output reg [N-1:0] v2 // register 2 value to read
@@ -29,6 +30,8 @@ module registers #(
         v1 <= regs[r1];
         v2 <= regs[r2];
         regs[0] <= 0;
-        regs[w1] <= (regs[w1]&(~mask))|(w&mask);
+        if (wf == 1'b1) begin
+            regs[w1] <= (regs[w1]&(~mask))|(w&mask);
+        end
     end
 endmodule

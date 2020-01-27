@@ -6,6 +6,7 @@ module memory #(
     input clk, // clock
     input [2+M-1:0] address, // address to read/write (2 is log2(B))
     input [N-1:0] mask, // 0 to keep memory value, 1 to overwrite
+    input wf, // write flag
     input [N-1:0] w,  // value to write
     output reg [N-1:0] v // read value
 );
@@ -23,8 +24,10 @@ module memory #(
 
     always @(posedge clk) begin
         v <= {ram[address+0],ram[address+1],ram[address+2],ram[address+3]};
-        for (i = 0; i < B; i++) begin
-            ram[address+i] <= (ram[address+i]&((~mask)>>((B-i-1)*8)))|((w>>((B-i-1)*8))&((mask)>>((B-i-1)*8)));
+        if (wf == 1) begin
+            for (i = 0; i < B; i++) begin
+                ram[address+i] <= (ram[address+i]&((~mask)>>((B-i-1)*8)))|((w>>((B-i-1)*8))&((mask)>>((B-i-1)*8)));
+            end
         end
     end
 
